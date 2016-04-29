@@ -149,6 +149,8 @@ def run
 	mem = ENV['MEMORY_LIMIT'].chomp("m").to_i / 2
 
 
+	isUsingAppDynamics = JAVA_OPTS.include?("-Dappdynamics.")
+	  
 	cmd = [
 	    "export",
 	    "JAVA_HOME=#{JAVA_HOME}",
@@ -156,6 +158,7 @@ def run
 		"#{SCRIPT_FOLDER}/gateway",
 	    "wrapper.java.maxmemory=#{mem}",
 	    "wrapper.java.initmemory=#{mem}",
+	    (isUsingAppDynamics ? ("-M-javaagent:./.java-buildpack/app_dynamics_agent/javaagent.jar"):("") ),
 	    "-M-Dmule.agent.enabled=false",
 	    "-M-Danypoint.platform.client_id=$ANYPOINT_PLATFORM_CLIENT_ID",
       "-M-Danypoint.platform.client_secret=$ANYPOINT_PLATFORM_CLIENT_SECRET",
