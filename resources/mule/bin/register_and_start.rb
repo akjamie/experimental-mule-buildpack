@@ -5,7 +5,7 @@ require 'open3'
 #parse the VCAP APPLICATION ENV VAR SO WE HAVE THE INFO WE NEED
 appData = JSON.parse(ENV['VCAP_APPLICATION'])
 
-#todo read variables from environment
+#read variables from environment
 USER = ENV['ANYPOINT_USERNAME']
 PASS = ENV['ANYPOINT_PASSWORD']
 ANYPOINT = ENV['ANYPOINT_ARM_HOST']
@@ -146,35 +146,27 @@ end
 def run
 	################### FINALLY RUN THE MULE #####################
 	
-	mem = ENV['MEMORY_LIMIT'].chomp("m").to_i / 2
+	mem = ENV['MEMORY_LIMIT'].chomp("m").to_i
 
+	if File.file?("#{SCRIPT_FOLDER}/gateway")	
+		startupScript = "gateway"
+	else 
+		startupScript = "mule"
+	end
 
-	isUsingAppDynamics = JAVA_OPTS.include?("-Dappdynamics.")
-	  
 	cmd = [
 	    "export",
 	    "JAVA_HOME=#{JAVA_HOME}",
 	    "&&",
-		"#{SCRIPT_FOLDER}/gateway",
-	    "wrapper.java.maxmemory=#{mem}",
-	    "wrapper.java.initmemory=#{mem}",
-	    (isUsingAppDynamics ? ("-M-javaagent:./.java-buildpack/app_dynamics_agent/javaagent.jar"):("") ),
+		"#{SCRIPT_FOLDER}/#{startupScript}",
 	    "-M-Dmule.agent.enabled=false",
 	    "-M-Danypoint.platform.client_id=$ANYPOINT_PLATFORM_CLIENT_ID",
       "-M-Danypoint.platform.client_secret=$ANYPOINT_PLATFORM_CLIENT_SECRET",
       "-M-Danypoint.platform.platform_base_uri=$ANYPOINT_PLATFORM_BASE_URI",
       "-M-Danypoint.platform.coreservice_base_uri=$ANYPOINT_PLATFORM_CORESERVICE_BASE_URI",
 	    "-M-Dhttp.port=$PORT",
-	    JAVA_OPTS.gsub('-D', '-M-D')
+	    JAVA_OPTS.gsub(' -', ' -M-')
 	 ].flatten.compact.join(' ')
-
-#	 
-#  expect(java_opts).to include('-javaagent:$PWD/.java-buildpack/app_dynamics_agent/javaagent.jar')
-#          expect(java_opts).to include('-Dappdynamics.controller.hostName=test-host-name')
-#          expect(java_opts).to include('-Dappdynamics.agent.applicationName=test-application-name')
-#          expect(java_opts).to include('-Dappdynamics.agent.tierName=test-application-name')
-#          expect(java_opts).to include('-Dappdynamics.agent.nodeName=$(expr "$VCAP_APPLICATION" : ' \
-#                                       '\'.*instance_index[": ]*\\([[:digit:]]*\\).*\')')
 	 
 	puts "Running mule..."
 	puts cmd

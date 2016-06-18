@@ -13,9 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Configuration for the Mule container
+
+#
+# Artifact resolution Configuration for the Mule container
+# 
+# Please replace <client_id> and <client_secret> with your Buildpack Nexus Proxy API credentials (supplied by MuleSoft)
+# and <nexusUsername> and <nexusPassword> with your Mulesoft EE Nexus repository credentials (supplied by MuleSoft).
+# Adjust version specification according to the runtime version to use (more information here:
+# https://github.com/cloudfoundry/java-buildpack/blob/master/docs/extending-repositories.md#version-syntax-and-ordering).
+#
+# Alternatively, use your custom buildpack repository to host Mulesoft artifacts 
+# (more information here: https://github.com/cloudfoundry/java-buildpack/blob/master/docs/extending-repositories.md)
+# 
 ---
-version: 2.1.+
-repository_root: "https://s3-eu-west-1.amazonaws.com/mule-cf-repo/api-gateway"
-userjars_root: ""
-offlinepolicies_root: ""
+# 
+# To use API Gateway Runtime, use the following configuration
+#version: 2.+
+#repository_root: "https://<client_id>:<client_secret>@pcf-buildpack-nexus-proxy.cloudhub.io/api/https/<nexusUsername>/<nexusPassword>/repository.mulesoft.org/443/releases-ee/com.mulesoft.anypoint/api-gateway-distribution-standalone"
+#userjars_root: ""
+#offlinepolicies_root: ""
+
+#
+# To use ESB Runtime, use the following configuration 
+#version: 3.+
+#repository_root: "https://<client_id>:<client_secret>@pcf-buildpack-nexus-proxy.cloudhub.io/api/https/<nexusUsername>/<nexusPassword>/repository.mulesoft.org/443/releases-ee/com.mulesoft.muleesb.distributions/mule-ee-distribution-standalone"
+#userjars_root: ""
+#offlinepolicies_root: ""
+

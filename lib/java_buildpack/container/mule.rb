@@ -108,9 +108,7 @@ module JavaBuildpack
           
           #I have verified that memory limit variable ALWAYS is expressed in megabytes eg: 512m
           #fortunately this is what our wrapper.conf process requires.
-          # we follow the same practice as cloudhub to have half of the container's memmory reserved for the heap.
-
-          mem = ENV['MEMORY_LIMIT'].chomp("m").to_i / 2
+          mem = ENV['MEMORY_LIMIT'].chomp("m").to_i 
 
           @logger.info { "Environment set memory is: #{mem}" }
 
@@ -121,7 +119,10 @@ module JavaBuildpack
     end
     
     def configure_domain
-      shell "sed -i #{@droplet.sandbox}/domains/api-gateway/mule-domain-config.xml -e 's/port=\"8081\"/port=\"${http.port}\"/'"
+      # If a default domain exists (API GW runtimes only), parametrise port number
+      if File.file?("#{@droplet.sandbox}/domains/api-gateway/mule-domain-config.xml")
+        shell "sed -i #{@droplet.sandbox}/domains/api-gateway/mule-domain-config.xml -e 's/port=\"8081\"/port=\"${http.port}\"/'"
+      end
     end
 
   end
