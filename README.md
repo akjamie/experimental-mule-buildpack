@@ -1,178 +1,228 @@
-# Cloud Foundry Java Buildpack for Mule runtime
+# Cloud Foundry Java Buildpack for the Anypoint Platform
 
-The `java-buildpack` is a [Cloud Foundry][] buildpack for running JVM-based applications.  It is designed to run many JVM-based applications ([Grails][], [Groovy][], Java Main, [Play Framework][], [Spring Boot][], and Servlet) with no additional configuration, but supports configuration of the standard components, and extension to add custom components.
+This extension of the [`java-buildpack`](https://github.com/cloudfoundry/java-buildpack) is a Cloud Foundry buildpack for running [Anypoint Platform](https://docs.mulesoft.com/mule-fundamentals/v/3.8/anypoint-platform-primer) applications.  It is designed to run both traditional Mule Integration applications and APIs (gateways and implementations) on both the Anypoint Runtime Engine (ESB) or API Gateway Runtime. 
 
-## Usage
-To use this buildpack specify the URI of the repository when pushing an application to Cloud Foundry:
 
-```bash
-$ cf push <APP-NAME> -p <ARTIFACT> -b https://github.com/cloudfoundry/java-buildpack.git
+## Installation
+
+**1. Clone this github repository**
+
+**2. Select the appropriate Mulesoft artifacts repository** 
+
+Edit the [`config/mule.yml`](config/mule.yml) file to the repository where the buildpack will find Mulesoft artifacts:
+	
+* If using [Mulesoft's Nexus-2-buildpack repository proxy facility](https://anypoint.mulesoft.com/apiplatform/jesusdeoliveira/#/portals/organizations/aa30fc71-3aa1-491f-b81a-464dd9e41f2e/apis/73317/versions/76323). The Nexus-2-buildpack repository proxy is a cloud API that translates Nexus releases catalogs into JavaBuilpack versioned component dependency repositories. You'll need an API key and secret and appropriate Nexus credentials in order to use this component: 
+	* Uncomment the appropriate section to use *APIGateway runtimes* or *Anypoint Runtime Engine (ESB) runtimes*. 
+	* Update `version` varible according to the version of the runtime you want to make available through the buildpack. For example: 
+		* if you want to enable all versions on the 3.x family, use `3.+`
+		* if you want to enable all minor versions of 3.7 family, use `3.7.+`
+		* If you want to enable only version 3.8.0, use `3.8.0`
+		* (more information about how the JavaBuildpack versioned dependency component resolves versions and syntax of version specifications, see here: https://github.com/cloudfoundry/java-buildpack/blob/master/docs/extending-repositories.md#version-syntax-and-ordering)
+	* Replace credentials appropriately:
+		* `<client_id>`: Your Mulesoft's Nexus-2-buildpack repository proxy facility API key
+		* `<client_secret>`: Your Mulesoft's Nexus-2-buildpack repository proxy facility API secret
+		* `<nexusUsername>`: Your Mulesoft's EE Nexus repository username
+		* `<nexusPassword>`: Your Mulesoft's EE Nexus repository password
+
+* Otherwise, if using a custom JavaBuildpack repository, update the [`config/mule.yml`](config/mule.yml) file accordingly (more information on how to set-up a custom JavaBuildpack repository can be found here: (https://github.com/cloudfoundry/java-buildpack/blob/master/docs/extending-repositories.md)).	
+
+
+**3. Select between Oracle JDK or Open JDK**
+
+Uncomment the appropriate entry on the [`config/components.yml`](config/components.yml) file, on the `jres` section.
+	
+**NOTE:** *Due to licensing restrictions, if using Oracle JDK, you need to provision a JavaBuildpack versioned component repository with the JDK distribution and reference this repository on the `repository_root` parameter of the [`config/oracle_jre`](config/oracle_jre.yml) file. Information on how to set-up a custom JavaBuildpack versioned component repository can be found here: https://github.com/cloudfoundry/java-buildpack/blob/master/docs/extending-repositories.md.*
+
+
+**4. Add your custom resources**
+
+The `resources/mule` directory replicates the *Anypoint Runtime Engine (ESB)* or *APIGateway Runtime* directory structure. Files and directories in this location will be **overlaid** on the expanded runtime upon deployment. Typical resources to add include:
+
+* Custom shared libraries (jar files) in `resources/mule/lib/user`
+* Patches (jar files) in `resources/mule/lib/user`, `resources/mule/lib/mule` and `resources/mule/plugins`
+* Custom domains in `resources/mule/domains`
+
+Refer to [Mulesoft documentation](https://docs.mulesoft.com/mule-user-guide/v/3.7/classloader-control-in-mule) or Support Portal Knowledge Base for specific details on using custom libraries and patches.
+
+
+**5. Commit your changes**
+
+
+From this point, you can `cf push` applications using this builpack by referencing the git clone URL, for example: 
+
+```
+cf push -b https://github.com/myorg/mycloned-buildpack-repo myapp.zip
 ```
 
-## Examples
-The following are _very_ simple examples for deploying the artifact types that we support.
 
-* [Embedded web server](docs/example-embedded-web-server.md)
-* [Grails](docs/example-grails.md)
-* [Groovy](docs/example-groovy.md)
-* [Java Main](docs/example-java_main.md)
-* [Play Framework](docs/example-play_framework.md)
-* [Servlet](docs/example-servlet.md)
-* [Spring Boot CLI](docs/example-spring_boot_cli.md)
+**6. Optionally, [package](https://docs.run.pivotal.io/buildpacks/custom.html) your buildpack for installation:** 
+* If packaging an on-line buildpack, use for example: `bundle exec rake package`
+* If packaging an off-line buildpack, use for example: `bundle exec rake package OFFLINE=true`
 
-## Configuration and Extension
-The buildpack supports extension through the use of Git repository forking. The easiest way to accomplish this is to use [GitHub's forking functionality][] to create a copy of this repository.  Make the required extension changes in the copy of the repository. Then specify the URL of the new repository when pushing Cloud Foundry applications. If the modifications are generally applicable to the Cloud Foundry community, please submit a [pull request][] with the changes.
+**7. Optionally, [install](https://docs.run.pivotal.io/buildpacks/custom.html) your buildpack on your PCF environment**
 
-Buildpack configuration can be overridden with an environment variable matching the configuration file you wish to override minus the `.yml` extension and with a prefix of `JBP_CONFIG`. It is not possible to add new configuration properties and properties with `nil` or empty values will be ignored by the buildpack. The value of the variable should be valid inline yaml, referred to as `flow style` in the yaml spec ([Wikipedia] has a good description of this yaml syntax). For example, to change the default version of Java to 7 and adjust the memory heuristics apply this environment variable to the application.
+For example: `cf create-buildpack BUILDPACK_NAME BUILDPACK_ZIP_PATH POSITION`.
 
-```bash
-$ cf set-env my-application JBP_CONFIG_OPEN_JDK_JRE '{jre: { version: 1.7.0_+ }}'
+
+
+
+## Operation
+
+### Application desing and configuration considerations
+
+#### Inbound HTTP endpoints
+
+When designing your applications, keep in mind that CloudFoundry will automatically allocate an internal port on the container linked to the routes defined on the CF Router for the application. This port is supplied to the application through the java property `${http.port}`. *This will be the only port your application will receive inbound traffic*. Additionally, *applications can only provide a single HTTP listener component*.
+
+**NOTE:** If using APIGateway Runtime, the runtime provides a pre-defined shared listener already configured to use this property. Your application should reference this listener, for example:
+```
+<http:listener config-ref="http-lc-0.0.0.0-8081" path="/api/*" doc:name="HTTP"/>
 ```
 
-If the key or value contains a special character such as `:` it should be escaped with double quotes. For example, to change the default repository path for the buildpack.
+#### Container disk size
 
-```bash
-$ cf set-env my-application JBP_CONFIG_REPOSITORY '{default_repository_root: "http://repo.example.io"}'
+Make sure you allocate more disk space than memory to your application, to be able to generate a JVM heap dump in case Mulesoft Support team requests it for diagnostics purposes. 
+
+
+### Memory allocation
+
+The Anypoint Buildpack uses the JavaBuildpack memory heuristics to allocate memory for the different JVM memory spaces, up to the maximum memory allocated to the application through configuration. 
+
+Details about this process and the allocations can be found here: https://support.run.pivotal.io/entries/80755985-How-do-I-size-my-Java-or-JVM-based-applications-
+
+### Application-specific configuration
+
+Application-specific configuration is provided through Environment Variables. These can be supplied through the CloudFoundry Apps Manager application configuration, or through Manifests, as described here: https://docs.run.pivotal.io/devguide/deploy-apps/manifest.html#env-block
+
+See an example `manifest.yml` file below:
+
 ```
-
-If the key or value contains an environment variable that you want to bind at runtime you need to escape it from your shell. For example, to add command line arguments containing an environment variable to a [Java Main](docs/container-java_main.md) application.
-
-```bash
-$ cf set-env my-application JBP_CONFIG_JAVA_MAIN '{arguments: "-server.port=\$PORT -foo=bar"}'
-```
-
-Environment variable can also be specified in the applications `manifest` file. For example, to specify an environment variable in an applications manifest file that disables Auto-reconfiguration.
-
-```bash
+---
+applications:
+- name: simpleapi
+  buildpack: https://github.com/mulesoft-consulting/cf-java-buildpack
   env:
-    JBP_CONFIG_SPRING_AUTO_RECONFIGURATION: '{enabled: false}'
+    ANYPOINT_PLATFORM_BASE_URI: https://anypoint.mulesoft.com/apiplatform
+    ANYPOINT_PLATFORM_CORESERVICE_BASE_URI: https://anypoint.mulesoft.com/accounts
+    ANYPOINT_PLATFORM_CLIENT_ID: 49d79437365517a6b96e29549744a3e1
+    ANYPOINT_PLATFORM_CLIENT_SECRET: 8b037d2eea669bed28A7693418FeB297
+    JBP_CONFIG_MULE: '{ offlinepolicies_root: "https://s3-eu-west-1.amazonaws.com/mule-cf-repo/userjars" }'
 ```
 
-This final example shows how to change the version of Tomcat that is used by the buildpack with an environment variable specified in the applications manifest file.
 
-```bash
-  env:
-    JBP_CONFIG_TOMCAT: '{tomcat: { version: 8.0.+ }}'
+### JVM specific parameters
+
+JVM-specific configuration parameters can be supplied through the JAVA_OPTS mechanism: either through a JAVA_OPTS [application environment variable](#application-specific-configuration), or through the [`config/java_opts`](config/java_opts) configuration file.
+
+
+## Integration with other components
+
+### Anypoint APIManager integration
+
+***Only applies for APIGateway 2.x or ESB 3.8+.x runtimes***
+
+APIManager integration allows you to enforce policies (traffic shaping, security and custom cross-cutting concerns) and collect analytics on your applications deployed on CloudFoundry, through the [Anypoint API Manager](https://www.mulesoft.com/platform/api/manager) component.  In order to manage an application through the APIManager, you will need to provide the following environment variables to your application:
+
+```
+ANYPOINT_PLATFORM_CLIENT_ID=<supply your anypoint org client id>
+ANYPOINT_PLATFORM_CLIENT_SECRET=<supply your anypoint org client secret>
+ANYPOINT_PLATFORM_BASE_URI=https://anypoint.mulesoft.com/apiplatform
+ANYPOINT_PLATFORM_CORESERVICE_BASE_URI=https://anypoint.mulesoft.com/accounts
 ```
 
-See the [Environment Variables][] documentation for more information.
+If using an on-premises deployment of the Anypoint Platform APIManager, edit the URLs accordingly.
 
-To learn how to configure various properties of the buildpack, follow the "Configuration" links below. More information on extending the buildpack is available [here](docs/extending.md).
+Additionally, you'll need to add an *API Autodiscovery* element on your application, to link it with the corresponding API entry on the APIManager component. For example:
 
-## Additional Documentation
-* [Design](docs/design.md)
-* [Security](docs/security.md)
-* Standard Containers
-	* [Dist ZIP](docs/container-dist_zip.md)
-	* [Groovy](docs/container-groovy.md) ([Configuration](docs/container-groovy.md#configuration))
-	* [Java Main](docs/container-java_main.md) ([Configuration](docs/container-java_main.md#configuration))
-	* [Play Framework](docs/container-play_framework.md)
-	* [Ratpack](docs/container-ratpack.md)
-	* [Spring Boot](docs/container-spring_boot.md)
-	* [Spring Boot CLI](docs/container-spring_boot_cli.md) ([Configuration](docs/container-spring_boot_cli.md#configuration))
-	* [Tomcat](docs/container-tomcat.md) ([Configuration](docs/container-tomcat.md#configuration))
-* Standard Frameworks
-	* [AppDynamics Agent](docs/framework-app_dynamics_agent.md) ([Configuration](docs/framework-app_dynamics_agent.md#configuration))
-	* [Container Certificate Trust Store](docs/framework-container_certificate_trust_store.md) ([Configuration](docs/framework-container_certificate_trust_store.md#configuration))
-	* [Container Customizer](docs/framework-container_customizer.md) ([Configuration](docs/framework-container_customizer.md#configuration))
-	* [Debug](docs/framework-debug.md) ([Configuration](docs/framework-debug.md#configuration))
-	* [DynaTrace Agent](docs/framework-dyna_trace_agent.md) ([Configuration](docs/framework-dyna_trace_agent.md#configuration))
-	* [Introscope Agent](docs/framework-introscope_agent.md) ([Configuration](docs/framework-introscope_agent.md#configuration))
-	* [Java Options](docs/framework-java_opts.md) ([Configuration](docs/framework-java_opts.md#configuration))
-	* [JRebel Agent](docs/framework-jrebel_agent.md) ([Configuration](docs/framework-jrebel_agent.md#configuration))
-	* [JMX](docs/framework-jmx.md) ([Configuration](docs/framework-jmx.md#configuration))
-	* [Luna Security Provider](docs/framework-luna_security_provider.md) ([Configuration](docs/framework-luna_security_provider.md#configuration))
-	* [MariaDB JDBC](docs/framework-maria_db_jdbc.md) ([Configuration](docs/framework-maria_db_jdbc.md#configuration))
-	* [New Relic Agent](docs/framework-new_relic_agent.md) ([Configuration](docs/framework-new_relic_agent.md#configuration))
-	* [Play Framework Auto Reconfiguration](docs/framework-play_framework_auto_reconfiguration.md) ([Configuration](docs/framework-play_framework_auto_reconfiguration.md#configuration))
-	* [Play Framework JPA Plugin](docs/framework-play_framework_jpa_plugin.md) ([Configuration](docs/framework-play_framework_jpa_plugin.md#configuration))
-	* [PostgreSQL JDBC](docs/framework-postgresql_jdbc.md) ([Configuration](docs/framework-postgresql_jdbc.md#configuration))
-	* [Spring Auto Reconfiguration](docs/framework-spring_auto_reconfiguration.md) ([Configuration](docs/framework-spring_auto_reconfiguration.md#configuration))
-	* [Spring Insight](docs/framework-spring_insight.md)
-	* [YourKit Profiler](docs/framework-your_kit_profiler.md) ([Configuration](docs/framework-your_kit_profiler.md#configuration))
-* Standard JREs
-	* [OpenJDK](docs/jre-open_jdk_jre.md) ([Configuration](docs/jre-open_jdk_jre.md#configuration))
-	* [Oracle](docs/jre-oracle_jre.md) ([Configuration](docs/jre-oracle_jre.md#configuration))
-* [Extending](docs/extending.md)
-	* [Application](docs/extending-application.md)
-	* [Droplet](docs/extending-droplet.md)
-	* [BaseComponent](docs/extending-base_component.md)
-	* [VersionedDependencyComponent](docs/extending-versioned_dependency_component.md)
-	* [ModularComponent](docs/extending-modular_component.md)
-	* [Caches](docs/extending-caches.md) ([Configuration](docs/extending-caches.md#configuration))
-	* [Logging](docs/extending-logging.md) ([Configuration](docs/extending-logging.md#configuration))
-	* [Repositories](docs/extending-repositories.md) ([Configuration](docs/extending-repositories.md#configuration))
-	* [Utilities](docs/extending-utilities.md)
-* [Debugging the Buildpack](docs/debugging-the-buildpack.md)
-* [Buildpack Modes](docs/buildpack-modes.md)
-* Related Projects
-	* [Java Buildpack Dependency Builder](https://github.com/cloudfoundry/java-buildpack-dependency-builder)
-	* [Java Test Applications](https://github.com/cloudfoundry/java-test-applications)
-	* [Java Buildpack System Tests](https://github.com/cloudfoundry/java-buildpack-system-test)
-
-## Building Packages
-The buildpack can be packaged up so that it can be uploaded to Cloud Foundry using the `cf create-buildpack` and `cf update-buildpack` commands.  In order to create these packages, the rake `package` task is used.
-
-### Online Package
-The online package is a version of the buildpack that is as minimal as possible and is configured to connect to the network for all dependencies.  This package is about 50K in size.  To create the online package, run:
-
-```bash
-$ bundle install
-$ bundle exec rake package
-...
-Creating build/java-buildpack-cfd6b17.zip
+```
+<mule ...>
+	...
+	<api-platform-gw:api apiName="sAPI - Clients" version="1.0" flowRef="api-main" create="true" apikitRef="api-config" doc:name="API Autodiscovery"/>
+	...
+</mule>
 ```
 
-### Offline Package
-The offline package is a version of the buildpack designed to run without access to a network.  It packages the latest version of each dependency (as configured in the [`config/` directory][]) and [disables `remote_downloads`][]. This package is about 180M in size.  To create the offline package, use the `OFFLINE=true` argument:
+Find more information about API Autodiscovery here: https://docs.mulesoft.com/anypoint-platform-for-apis/api-auto-discovery
 
-To pin the version of dependencies used by the buildpack to the ones currently resolvable use the `PINNED=true` argument. This will update the [`config/` directory][] to contain exact version of each dependency instead of version ranges.
+### AppDynamics integration
 
-```bash
-$ bundle install
-$ bundle exec rake package OFFLINE=true PINNED=true
-...
-Creating build/java-buildpack-offline-cfd6b17.zip
+The Anypoint buildpack provides out-of-the-box integration with App Dynamics through the standard JavaBuildpack App Dynamics Extension. If the application has a bound custom service following [naming conventions](https://github.com/cloudfoundry/java-buildpack/blob/master/docs/framework-app_dynamics_agent.md) and pointing to an App Dynamics instace, the JVM will start with the appropriate flags to connect to it.
+
+See more details aboud App Dynamics integration here: https://github.com/cloudfoundry/java-buildpack/blob/master/docs/framework-app_dynamics_agent.md
+
+
+## Debugging and troubleshooting
+
+### Debugging buildpack provisiniong process
+
+Add a `JBP_LOG_LEVEL=debug` environment variable to generate verbose debugging output of the whole buildpack provisioning process. Debug information will be produced on the application logs.
+
+
+### Patching the runtime 
+
+Add Mulesoft patches (jar files) to the `resources/mule` directory structure as described [here](#application-specific-configuration). 
+
+**NOTE:** *Pay special attention to the version of the runtime that patches apply to, and ensure it matches the versions the buildpack will consider as defined on the [`config/mule.yml`](config/mule.yml) file.*
+
+
+### Getting diagnostics information for Mulesoft Support team
+
+If a runtime deployed on a CF environment through the builpack runs into issues, Mulesoft Support team will request a JVM heap dump or JVM thread dump for diagnostics purposes. In order to generate one, you need to log in the CF container running your application, use JDK tools to generate the dump, and upload the data through `scp` or `sftp` outside the CF env.
+
+**IMPORTANT:** *Make sure your application always has more disk space allocated than memory, to be able to store the dumps on the container transient storage filesystem and upload to an external SFTP or SSH server.*
+
+To perform this process, follow these steps:
+
+**1. Log-in your application container through SSH**
+
+If your space configuration allows it, you can enable SSH access using the CF CLI:
+
+```
+cf enable-ssh MY-APP
 ```
 
-### Package Versioning
-Keeping track of different versions of the buildpack can be difficult.  To help with this, the rake `package` task puts a version discriminator in the name of the created package file.  The default value for this discriminator is the current Git hash (e.g. `cfd6b17`).  To change the version when creating a package, use the `VERSION=<VERSION>` argument:
+Then you can log-in the container by doing:
 
-```bash
-$ bundle install
-$ bundle exec rake package VERSION=2.1
-...
-Creating build/java-buildpack-2.1.zip
+```
+cf ssh MY-APP
 ```
 
-## Running Tests
-To run the tests, do the following:
+(If your space doesn't allow SSH access, request it to a CF administrator or deploy the app on a space that allows it)
 
-```bash
-$ bundle install
-$ bundle exec rake
+More information on enabling SSH access can be found here: https://docs.cloudfoundry.org/devguide/deploy-apps/ssh-apps.html
+
+
+**2. Find JVM process PID**
+
+You can determine the JVM process running the Anypoint Runtime Engine or API Gateway Runtime with:
+
+```
+$ PID=$(pgrep java)
 ```
 
-[Running Cloud Foundry locally][] is useful for privately testing new features.
+**3. Produce the diagnostics data**
 
-## Contributing
-[Pull requests][] are welcome; see the [contributor guidelines][] for details.
+You can use JDK toolkit to produce the diagnostics data Mulesoft Support team is requesting. 
 
-## License
-This buildpack is released under version 2.0 of the [Apache License][].
+For example, to produce a JVM heapdump with Oracle JDK use the following:
+```
+$ /home/vcap/app/.java-buildpack/oracle_jre/bin/jmap -dump:format=b,file=heap.bin $PID
+```
 
-[`config/` directory]: config
-[Apache License]: http://www.apache.org/licenses/LICENSE-2.0
-[Cloud Foundry]: http://www.cloudfoundry.com
-[contributor guidelines]: CONTRIBUTING.md
-[disables `remote_downloads`]: docs/extending-caches.md#configuration
-[Environment Variables]: http://docs.cloudfoundry.org/devguide/deploy-apps/manifest.html#env-block
-[GitHub's forking functionality]: https://help.github.com/articles/fork-a-repo
-[Grails]: http://grails.org
-[Groovy]: http://groovy.codehaus.org
-[Play Framework]: http://www.playframework.com
-[pull request]: https://help.github.com/articles/using-pull-requests
-[Pull requests]: http://help.github.com/send-pull-requests
-[Running Cloud Foundry locally]: http://docs.cloudfoundry.org/deploying/run-local.html
-[Spring Boot]: http://projects.spring.io/spring-boot/
-[Wikipedia]: https://en.wikipedia.org/wiki/YAML#Basic_components_of_YAML
+To produce a JVM heapdump with Open JDK, use the following:
+```
+ $ /home/vcap/app/.java-buildpack/open_jdk_jre/bin/jmap -dump:format=b,file=heap.bin $PID
+```
+
+**4. Send the diagnostics data to an external SSH/SFTP server**
+
+You can use `scp` or `sftp` to upload the dumps to an external server, from where you can provide it to Mulesoft Support team:
+
+```
+scp heap.bin user@externalserver.myorg.com:/home/user
+```
+
+
+
+
+
