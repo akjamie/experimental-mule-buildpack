@@ -40,3 +40,5 @@
 #userjars_root: ""
 #offlinepolicies_root: ""
 
+version: 3.+
+repository_root: "https://pcf-buildpack-nexus-proxy.cloudhub.io/api/https/repository.mulesoft.org/443/releases-ee/com.mulesoft.muleesb.distributions/mule-ee-distribution-standalone"
