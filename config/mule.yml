@@ -30,15 +30,12 @@
 # To use API Gateway Runtime, use the following configuration
 #version: 2.+
 #repository_root: "https://<client_id>:<client_secret>@pcf-buildpack-nexus-proxy.cloudhub.io/api/https/<nexusUsername>/<nexusPassword>/repository.mulesoft.org/443/releases-ee/com.mulesoft.anypoint/api-gateway-distribution-standalone"
-#userjars_root: ""
-#offlinepolicies_root: ""
+
 
 #
 # To use ESB Runtime, use the following configuration 
 #version: 3.+
 #repository_root: "https://<client_id>:<client_secret>@pcf-buildpack-nexus-proxy.cloudhub.io/api/https/<nexusUsername>/<nexusPassword>/repository.mulesoft.org/443/releases-ee/com.mulesoft.muleesb.distributions/mule-ee-distribution-standalone"
-#userjars_root: ""
-#offlinepolicies_root: ""
 
 version: 3.+
 repository_root: "https://pcf-buildpack-nexus-proxy.cloudhub.io/api/https/repository.mulesoft.org/443/releases-ee/com.mulesoft.muleesb.distributions/mule-ee-distribution-standalone"
