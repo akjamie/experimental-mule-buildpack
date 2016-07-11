@@ -1,0 +1,33 @@
+#!/bin/sh
+echo ""
+echo "Anypoint Platform buildpack diagnostics information"
+echo "==================================================="
+echo "Generated on the $(date)"
+echo ""
+echo "Remotes:"
+git remote -v
+echo "" 
+echo "Latest commit from upstream (origin/master branch)"
+git log --graph --decorate --oneline | grep origin/master
+echo ""
+echo "Local customisations:"
+git diff --dirstat master origin/master
+
+NONSUPPORTED=$(git diff --dirstat master origin/master | grep -v "config" | grep -v "resources")
+
+if [ ! -z "$NONSUPPORTED" ];
+then
+	FILENAME=cf-mule-buildpack-diff-$(date +%Y%m%d-%H%M%S).txt
+	for i in $(git diff --dirstat master origin/master | grep -v "config" | grep -v "resources" | awk '{print $2}'); do git diff master origin/master $i >> $FILENAME; done;
+
+	echo ""
+	echo "*** WARNING: THIS BUILDPACK HAS MODIFICATIONS ON NON-SUPPORTED LOCATIONS ***"
+	echo "" 
+	echo "SUPPORTED LOCATIONS FOR CUSTOMISATIONS ARE ONLY 'config' AND" 
+	echo "'resources' DIRECTORIES. Non-supported modified files were found here:"
+	echo $NONSUPPORTED
+	echo ""
+	echo "(detailed diff generated on $FILENAME file)"
+	echo ""
+fi
+ 
