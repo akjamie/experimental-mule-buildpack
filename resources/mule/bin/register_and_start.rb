@@ -14,7 +14,8 @@ SERVER_NAME = "#{appData['application_name']}#{ENV['CF_INSTANCE_INDEX']}"
 JAVA_HOME = ENV['JAVA_HOME']
 ANYPOINT_ON_PREM = ENV['ANYPOINT_ARM_ONPREM']
 JAVA_OPTS = ENV['JAVA_OPTS']
-  
+APP_ID = appData['application_id']  
+INSTANCE_INDEX=ENV['CF_INSTANCE_INDEX']
   
 SCRIPT_FOLDER = File.expand_path(File.dirname(__FILE__))
 
@@ -143,6 +144,32 @@ def register
 	puts `#{cmd}`
 end
 
+
+def generate_cluster_id
+	
+	token = 'bearer eyJhbGciOiJSUzI1NiJ9.eyJqdGkiOiI3ZTA5Zjc5ZC1iMGU2LTRjM2YtOTA0NS1lZWI1MGE1NTc0MzciLCJzdWIiOiI2NWY4OGIyZC02OTc0LTQxNjYtODJhYy02MWI4MjE2YmRhMWEiLCJzY29wZSI6WyJjbG91ZF9jb250cm9sbGVyLnJlYWQiLCJwYXNzd29yZC53cml0ZSIsImNsb3VkX2NvbnRyb2xsZXIud3JpdGUiLCJvcGVuaWQiLCJ1YWEudXNlciJdLCJjbGllbnRfaWQiOiJjZiIsImNpZCI6ImNmIiwiYXpwIjoiY2YiLCJncmFudF90eXBlIjoicGFzc3dvcmQiLCJ1c2VyX2lkIjoiNjVmODhiMmQtNjk3NC00MTY2LTgyYWMtNjFiODIxNmJkYTFhIiwib3JpZ2luIjoidWFhIiwidXNlcl9uYW1lIjoianVhbmNhdmFsbG90dGkiLCJlbWFpbCI6Imp1YW5jYXZhbGxvdHRpIiwicmV2X3NpZyI6Ijk3ODRiMWIiLCJpYXQiOjE0Njg1MzA4ODEsImV4cCI6MTQ2ODUzODA4MSwiaXNzIjoiaHR0cHM6Ly91YWEuc3lzdGVtLnBjZi5tdWxlc29mdC5jb20vb2F1dGgvdG9rZW4iLCJ6aWQiOiJ1YWEiLCJhdWQiOlsiY2xvdWRfY29udHJvbGxlciIsInBhc3N3b3JkIiwiY2YiLCJ1YWEiLCJvcGVuaWQiXX0.B0O35BJSGBBADHtDorqy8Q0ljyHat2EFoaLziC0qoXQX6yNWkdtntLEgWne9QkRc-d6J5j42Tk8lBrtDAwsRzj6r52DMVMpvj_8KKIfngUQ2iImG9cAMHhSBexDq6_53WgEXb-sHX0AIjiiD4a0qHeKFDGbBY6Icd2qSM5MnhPenJGftsgpqpsrGvSbNyg71aOYfuPkfOX3j44_zKqNyoEjRZrvl_1bPSzNpWJ42fZNNtUk_4va9tUJHGTAwToQ7WNcMFzdviQR92ren7xeEnvib18p9zsWSh8fLbkMr9irxYu9VTBgLdLedO1Rr8AxUwYmj7SkBu_F2I0UOLAEaew'
+
+	json = `curl -k -s -X GET https://api.system.pcf.mulesoft.com/v2/apps/#{APP_ID}/stats -H \"Authorization: #{token}\" -H \"Cookie: \"`
+
+	stats = JSON.parse(json)
+
+	ips = []
+
+	stats.each do |key, value|
+		ips.push value['stats']['host'] 
+	end
+
+	return [
+		"-M-Dmule.cluster.multicastenabled=false",
+		"-M-Dmule.cluster.nodes=#{ips.flatten.compact.join(',')}",
+		"-M-Dmule.clusterId=#{APP_ID}",
+		"-M-Dmule.clusterNodeId=#{INSTANCE_INDEX}",
+		"-Dmule.clusterSize=#{ips.length}"
+	].flatten.compact.join ' '
+
+end
+
+
 def run
 	################### FINALLY RUN THE MULE #####################
 	
@@ -164,6 +191,7 @@ def run
       "-M-Danypoint.platform.client_secret=$ANYPOINT_PLATFORM_CLIENT_SECRET",
       "-M-Danypoint.platform.platform_base_uri=$ANYPOINT_PLATFORM_BASE_URI",
       "-M-Danypoint.platform.coreservice_base_uri=$ANYPOINT_PLATFORM_CORESERVICE_BASE_URI",
+      generate_cluster_id,
 	    "-M-Dhttp.port=$PORT",
 	    JAVA_OPTS.gsub(' -', ' -M-')
 	 ].flatten.compact.join(' ')
@@ -180,3 +208,4 @@ if !ANYPOINT.nil?
 end
 
 run
+
