@@ -193,7 +193,7 @@ def run
       "-M-Danypoint.platform.coreservice_base_uri=$ANYPOINT_PLATFORM_CORESERVICE_BASE_URI",
       generate_cluster_id,
 	    "-M-Dhttp.port=$PORT",
-	    JAVA_OPTS.gsub(' -', ' -M-')
+	    JAVA_OPTS.gsub('-D', '-M-D')
 	 ].flatten.compact.join(' ')
 	 
 	puts "Running mule..."
